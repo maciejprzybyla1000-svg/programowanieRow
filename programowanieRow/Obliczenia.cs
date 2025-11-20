@@ -2,6 +2,15 @@
 
 public class Obliczenia
 {
+    
+    public interface IFunction
+    {
+        decimal GetY(decimal x); 
+        string Name { get; }
+    }
+    
+    
+    
     private static double Funkcja1(double x)
     {
         return 2 * x + 2 * x * x;
@@ -53,4 +62,34 @@ public class Obliczenia
         return sum * dx;
     }
 
+
+    public class WorkerFunction : IFunction
+    {
+        private int wybor;
+        public string Name { get; private set; }
+
+        public WorkerFunction(int wybor)
+        {
+            this.wybor = wybor;
+            switch (wybor)
+            {
+                case 1 :
+                    Name = "Funkcja 1: y = 2x + 2x^2";
+                    break;
+                case 2 :
+                    Name = "Funkcja 2: y = 2x^2";
+                    break;
+                case 3 :
+                    Name = "Funkcja 3: y = 2x - 3";
+                    break;
+                
+            }
+        }
+
+        public decimal GetY(decimal x)
+        {
+            return (decimal)Obliczenia.ObliczFunkcje(wybor, (double)x);
+        }
+
+    }
 }

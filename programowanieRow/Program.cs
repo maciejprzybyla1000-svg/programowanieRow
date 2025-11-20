@@ -35,6 +35,9 @@ internal class Program
                 case "1":
                     zadanie1();
                     break;
+                case "2" :
+                    zadanie2();
+                    break;
                 case "0":
                     Console.WriteLine("Koniec programu");
                     break;
@@ -86,6 +89,11 @@ internal class Program
         Console.WriteLine($"\nCzas wykonania: {elapsed_time} ms");
 
         Console.ReadKey();
+    }
+
+    static void zadanie2()
+    {
+        
     }
 }
 
