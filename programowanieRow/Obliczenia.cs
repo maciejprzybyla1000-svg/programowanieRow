@@ -2,36 +2,30 @@
 
 public class Obliczenia
 {
-    
     public interface IFunction
     {
         decimal GetY(decimal x); 
         string Name { get; }
     }
     
-    
-    
     private static double Funkcja1(double x)
     {
         return 2 * x + 2 * x * x;
     }
 
-   
     private static double Funkcja2(double x)
     {
         return 2 * x * x;
     }
 
-    
     private static double Funkcja3(double x)
     {
         return 2 * x - 3;
     }
 
-
     public static double ObliczFunkcje(int wybor, double x)
-   {
-       switch (wybor)
+    {
+        switch (wybor)
         {
             case 1:
                 return Funkcja1(x);
@@ -42,8 +36,7 @@ public class Obliczenia
             default:
                 throw new ArgumentException("Niepoprawny wybór funkcji!");
         }
-   }
-
+    }
 
     public static double CalkaTrapezy(int wybor, double a, double b, int n)
     {
@@ -54,14 +47,53 @@ public class Obliczenia
         
         for (int i = 0; i < n; i++)
         {
-            double x = a + i * dx;  // Obliczamy kolejny punkt x
-            double wartosc = ObliczFunkcje(wybor, x);  // Obliczamy f(x)
+            double x = a + i * dx;
+            double wartosc = ObliczFunkcje(wybor, x);
             sum += wartosc;
         }
         
         return sum * dx;
     }
 
+    public static double CalkaTrapezyBG(
+        IFunction func, 
+        double a, 
+        double b, 
+        int n, 
+        System.ComponentModel.BackgroundWorker worker)
+    {
+        double dx = (b - a) / n;
+        double sum = 0.5 * (
+            (double)func.GetY((decimal)a) +
+            (double)func.GetY((decimal)b)
+        );
+
+        int lastReported = 0;
+
+        for (int i = 1; i < n; i++)
+        {
+            // Sprawdź czy użytkownik anulował
+            if (worker.CancellationPending)
+            {
+                return double.NaN;
+            }
+
+            double x = a + i * dx;
+            sum += (double)func.GetY((decimal)x);
+
+            // Raportuj postęp co 10%
+            int progress = (i * 100) / n;
+            if (progress >= lastReported + 10)
+            {
+                worker.ReportProgress(progress);
+                lastReported = progress;
+            }
+        }
+
+        // Zgłoś 100% po zakończeniu
+        worker.ReportProgress(100);
+        return sum * dx;
+    }
 
     public class WorkerFunction : IFunction
     {
@@ -73,16 +105,15 @@ public class Obliczenia
             this.wybor = wybor;
             switch (wybor)
             {
-                case 1 :
+                case 1:
                     Name = "Funkcja 1: y = 2x + 2x^2";
                     break;
-                case 2 :
+                case 2:
                     Name = "Funkcja 2: y = 2x^2";
                     break;
-                case 3 :
+                case 3:
                     Name = "Funkcja 3: y = 2x - 3";
                     break;
-                
             }
         }
 
@@ -90,6 +121,5 @@ public class Obliczenia
         {
             return (decimal)Obliczenia.ObliczFunkcje(wybor, (double)x);
         }
-
     }
 }
