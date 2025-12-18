@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("programowanieRow")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c07458c0724e99188dfb19629be3516d65edc6a8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cac1c7cf15fa08c0e2a4cae09f389ce39f55959e")]
 [assembly: System.Reflection.AssemblyProductAttribute("programowanieRow")]
 [assembly: System.Reflection.AssemblyTitleAttribute("programowanieRow")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
