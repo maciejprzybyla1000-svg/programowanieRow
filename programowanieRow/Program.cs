@@ -19,7 +19,8 @@ internal class Program
 
             Console.WriteLine("Zadanie 1 - Wyznaczanie wartości całki");
             Console.WriteLine("Zadanie 2 - Obliczenia z BackgroundWorker");
-            Console.WriteLine("Zadanie 3 - Obliczenia z wyborem metody (BG/TPL)");
+            Console.WriteLine("Zadanie 3 - Obliczenia z wyborem metody (BG/TPL/Thread/ThreadPool)");
+            Console.WriteLine("Zadanie 4 - Porównanie wszystkich metod");
             Console.WriteLine("0 - Wyjście");
 
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -39,6 +40,9 @@ internal class Program
                     break;
                 case "3":
                     zadanie3();
+                    break;
+                case "4":
+                    zadanie4();
                     break;
                 case "0":
                     Console.WriteLine("Koniec programu");
@@ -105,34 +109,50 @@ internal class Program
         Console.WriteLine("Wybierz metodę przetwarzania:");
         Console.WriteLine("1) BackgroundWorker");
         Console.WriteLine("2) TPL (Task Parallel Library)");
-        int wyborFunkcji = ExceptionHolder.ReadInt("Twój wybór: ", 1, 2);
-        
+        Console.WriteLine("3) Thread");
+        Console.WriteLine("4) ThreadPool");
+
+        int wybor = ExceptionHolder.ReadInt("Twój wybór: ", 1, 4);
 
         Console.WriteLine("\nWybierz funkcję:");
         Console.WriteLine("1) y = 2x + 2x^2");
         Console.WriteLine("2) y = 2x^2");
         Console.WriteLine("3) y = 2x - 3");
-        
-        int wyborFunkcji_in = ExceptionHolder.ReadInt("Twój wybór: ", 1, 3);
+
+        int wyborFunkcji = ExceptionHolder.ReadInt("Twój wybór: ", 1, 3);
 
         var func = new Obliczenia.WorkerFunction(wyborFunkcji);
         IProcessor processor;
 
-        if (wyborFunkcji_in == 1)
+        switch (wybor)
         {
-            processor = new BackgroundWorkerProcessor();
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("\n--- BackgroundWorker ---");
-            Console.ResetColor();
-            
-        }
-        else
-        {
-            processor = new TplProcessor();
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("\n--- TPL ---");
-            Console.ResetColor();
-            
+            case 1:
+                processor = new BackgroundWorkerProcessor();
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\n--- BackgroundWorker ---");
+                Console.ResetColor();
+                break;
+            case 2:
+                processor = new TplProcessor();
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\n--- TPL ---");
+                Console.ResetColor();
+                break;
+            case 3:
+                processor = new ThreadProcessor();
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\n--- Thread ---");
+                Console.ResetColor();
+                break;
+            case 4:
+                processor = new ThreadPoolProcessor();
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\n--- ThreadPool ---");
+                Console.ResetColor();
+                break;
+            default:
+                processor = new BackgroundWorkerProcessor();
+                break;
         }
 
         RunCalculations(processor, func);
@@ -148,6 +168,7 @@ internal class Program
         };
 
         double[] results = new double[3];
+        long[] threadTimes = new long[3];
         int[] progress = new int[3];
         int finished = 0;
         object lockObj = new object();
@@ -167,6 +188,7 @@ internal class Program
                 ranges[i].A,
                 ranges[i].B,
                 100_000_000,
+                
                 (prog) =>
                 {
                     lock (lockObj)
@@ -178,19 +200,22 @@ internal class Program
                                       $"{ranges[2].Name}: {progress[2],3}%   ");
                     }
                 },
-                (result, cancelled) =>
+                
+                (result, cancelled, threadTime) =>
                 {
                     lock (lockObj)
                     {
+                        threadTimes[index] = threadTime;
+
                         if (cancelled || double.IsNaN(result))
                         {
-                            Console.WriteLine($"\n{ranges[index].Name} [{ranges[index].A} ; {ranges[index].B}] - ANULOWANO");
+                            Console.WriteLine($"\n{ranges[index].Name} [{ranges[index].A} ; {ranges[index].B}] - ANULOWANO (Czas wątku: {threadTime} ms)");
                             results[index] = double.NaN;
                         }
                         else
                         {
                             results[index] = result;
-                            Console.WriteLine($"\n{ranges[index].Name} [{ranges[index].A} ; {ranges[index].B}] = {results[index]:F6} ✓");
+                            Console.WriteLine($"\n{ranges[index].Name} [{ranges[index].A} ; {ranges[index].B}] = {results[index]:F6} ✓ (Czas wątku: {threadTime} ms)");
                         }
 
                         finished++;
@@ -198,25 +223,25 @@ internal class Program
                         if (finished == 3)
                         {
                             stopwatch.Stop();
-                            Console.WriteLine("\n" + new string('=', 60));
-                            Console.WriteLine("                    PODSUMOWANIE");
-                            Console.WriteLine(new string('=', 60));
+                            Console.WriteLine("\n" + new string('=', 70));
+                            Console.WriteLine("                         PODSUMOWANIE");
+                            Console.WriteLine(new string('=', 70));
 
                             for (int j = 0; j < 3; j++)
                             {
                                 if (!double.IsNaN(results[j]))
                                 {
-                                    Console.WriteLine($"{ranges[j].Name} [{ranges[j].A,4} ; {ranges[j].B,4}] = {results[j]:F6}");
+                                    Console.WriteLine($"{ranges[j].Name} [{ranges[j].A,4} ; {ranges[j].B,4}] = {results[j]:F6} | Czas: {threadTimes[j]} ms");
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"{ranges[j].Name} [{ranges[j].A,4} ; {ranges[j].B,4}] = ANULOWANO");
+                                    Console.WriteLine($"{ranges[j].Name} [{ranges[j].A,4} ; {ranges[j].B,4}] = ANULOWANO | Czas: {threadTimes[j]} ms");
                                 }
                             }
 
-                            Console.WriteLine(new string('=', 60));
-                            Console.WriteLine($"Całkowity czas wykonania: {stopwatch.ElapsedMilliseconds} ms");
-                            Console.WriteLine(new string('=', 60) + "\n");
+                            Console.WriteLine(new string('=', 70));
+                            Console.WriteLine($"Całkowity czas wykonania aplikacji: {stopwatch.ElapsedMilliseconds} ms");
+                            Console.WriteLine(new string('=', 70) + "\n");
                         }
                     }
                 }
@@ -251,4 +276,121 @@ internal class Program
 
         Thread.Sleep(200);
     }
+     static void zadanie4()
+    {
+        Console.WriteLine("=== ZADANIE 4: Porównanie wszystkich metod ===\n");
+
+        Console.WriteLine("Wybierz funkcję:");
+        Console.WriteLine("1) y = 2x + 2x^2");
+        Console.WriteLine("2) y = 2x^2");
+        Console.WriteLine("3) y = 2x - 3");
+
+        int wyborFunkcji = ExceptionHolder.ReadInt("Twój wybór: ", 1, 3);
+
+        var func = new Obliczenia.WorkerFunction(wyborFunkcji);
+
+        var metody = new (string Nazwa, IProcessor Processor)[]
+        {
+            ("BackgroundWorker", new BackgroundWorkerProcessor()),
+            ("TPL", new TplProcessor()),
+            ("Thread", new ThreadProcessor()),
+            ("ThreadPool", new ThreadPoolProcessor())
+        };
+
+        var wyniki = new List<(string Metoda, long[] CzasyWatkow, long CzasCalkowity)>();
+
+        Console.WriteLine("\nNaciśnij ENTER, aby rozpocząć testy wszystkich metod.");
+        Console.ReadLine();
+
+        foreach (var metoda in metody)
+        {
+            string nazwaMetody = metoda.Nazwa;
+            IProcessor processor = metoda.Processor;
+            Console.Clear();
+            Console.WriteLine($"=== Testowanie metody: {nazwaMetody} ===\n");
+
+            var ranges = new (double A, double B, string Name)[]
+            {
+                (-10, 10, "Przedział 1"),
+                (-5, 20, "Przedział 2"),
+                (-5, 0, "Przedział 3")
+            };
+
+            double[] results = new double[3];
+            long[] threadTimes = new long[3];
+            int[] progress = new int[3];
+            int finished = 0;
+            object lockObj = new object();
+
+            var stopwatch = Stopwatch.StartNew();
+
+            for (int i = 0; i < 3; i++)
+            {
+                int index = i;
+
+                processor.StartWork(
+                    func,
+                    ranges[i].A,
+                    ranges[i].B,
+                    100_000_000,
+                    (prog) =>
+                    {
+                        lock (lockObj)
+                        {
+                            progress[index] = prog;
+                            Console.SetCursorPosition(0, Console.CursorTop);
+                            Console.Write($"{ranges[0].Name}: {progress[0],3}%  |  " +
+                                          $"{ranges[1].Name}: {progress[1],3}%  |  " +
+                                          $"{ranges[2].Name}: {progress[2],3}%   ");
+                        }
+                    },
+                    (result, cancelled, threadTime) =>
+                    {
+                        lock (lockObj)
+                        {
+                            threadTimes[index] = threadTime;
+                            results[index] = cancelled ? double.NaN : result;
+                            finished++;
+                        }
+                    }
+                );
+            }
+
+            Console.WriteLine("\nObliczenia w toku...\n");
+            Console.WriteLine("Przedział 1:   0%  |  Przedział 2:   0%  |  Przedział 3:   0%   ");
+
+            while (true)
+            {
+                lock (lockObj)
+                {
+                    if (finished == 3) break;
+                }
+                Thread.Sleep(50);
+            }
+
+            stopwatch.Stop();
+            wyniki.Add((nazwaMetody, threadTimes, stopwatch.ElapsedMilliseconds));
+
+            Console.WriteLine($"\n\n✓ {nazwaMetody} zakończone - Czas całkowity: {stopwatch.ElapsedMilliseconds} ms");
+            Thread.Sleep(1000);
+        }
+
+        
+        Console.Clear();
+        Console.WriteLine("=== PODSUMOWANIE PORÓWNANIA METOD ===\n");
+        Console.WriteLine(new string('=', 80));
+        Console.WriteLine($"{"Metoda",-20} | {"Wątek 1",-12} | {"Wątek 2",-12} | {"Wątek 3",-12} | {"Czas całkowity",-15}");
+        Console.WriteLine(new string('=', 80));
+
+        foreach (var (metoda, czasyWatkow, czasCalkowity) in wyniki)
+        {
+            Console.WriteLine($"{metoda,-20} | {czasyWatkow[0] + " ms",-12} | {czasyWatkow[1] + " ms",-12} | {czasyWatkow[2] + " ms",-12} | {czasCalkowity + " ms",-15}");
+        }
+
+        Console.WriteLine(new string('=', 80));
+        
+    }
+    
 }
+
+

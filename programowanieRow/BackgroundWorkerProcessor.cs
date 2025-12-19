@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 
 namespace programowanieRow
 {
@@ -14,11 +15,13 @@ namespace programowanieRow
             double b,
             int n,
             Action<int> progressCallback,
-            Action<double, bool> completedCallback)
+            Action<double, bool, long> completedCallback)
         {
             BackgroundWorker worker = new BackgroundWorker();
             worker.WorkerReportsProgress = true;
             worker.WorkerSupportsCancellation = true;
+
+            var stopwatch = Stopwatch.StartNew();
 
             worker.DoWork += (sender, e) =>
             {
@@ -48,9 +51,10 @@ namespace programowanieRow
 
             worker.RunWorkerCompleted += (sender, e) =>
             {
+                stopwatch.Stop();
                 bool cancelled = e.Cancelled || (e.Result is double d && double.IsNaN(d));
                 double result = cancelled ? double.NaN : (double)e.Result;
-                completedCallback(result, cancelled);
+                completedCallback(result, cancelled, stopwatch.ElapsedMilliseconds);
             };
 
             workers.Add(worker);

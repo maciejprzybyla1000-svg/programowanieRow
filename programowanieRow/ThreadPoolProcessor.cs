@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace programowanieRow
 {
-    public class TplProcessor : IProcessor
+    public class ThreadPoolProcessor : IProcessor
     {
-        private List<CancellationTokenSource> cancellationTokens = new List<CancellationTokenSource>();
+        private List<bool> cancellationFlags = new List<bool>();
 
         public void StartWork(
             Obliczenia.IFunction func,
@@ -18,20 +17,20 @@ namespace programowanieRow
             Action<int> progressCallback,
             Action<double, bool, long> completedCallback)
         {
-            CancellationTokenSource cts = new CancellationTokenSource();
-            cancellationTokens.Add(cts);
+            int index = cancellationFlags.Count;
+            cancellationFlags.Add(false);
 
             var stopwatch = Stopwatch.StartNew();
 
-            Task.Run(() =>
+            ThreadPool.QueueUserWorkItem(_ =>
             {
                 try
                 {
-                    double result = CalkaTrapezyTPL(func, a, b, n, progressCallback, cts.Token);
-                    
+                    double result = CalkaTrapezyThreadPool(func, a, b, n, progressCallback, index);
+
                     stopwatch.Stop();
 
-                    if (cts.Token.IsCancellationRequested)
+                    if (cancellationFlags[index])
                     {
                         completedCallback(double.NaN, true, stopwatch.ElapsedMilliseconds);
                     }
@@ -40,21 +39,21 @@ namespace programowanieRow
                         completedCallback(result, false, stopwatch.ElapsedMilliseconds);
                     }
                 }
-                catch (OperationCanceledException)
+                catch (Exception)
                 {
                     stopwatch.Stop();
                     completedCallback(double.NaN, true, stopwatch.ElapsedMilliseconds);
                 }
-            }, cts.Token);
+            });
         }
 
-        private double CalkaTrapezyTPL(
+        private double CalkaTrapezyThreadPool(
             Obliczenia.IFunction func,
             double a,
             double b,
             int n,
             Action<int> progressCallback,
-            CancellationToken token)
+            int index)
         {
             double dx = (b - a) / n;
             double sum = 0.5 * ((double)func.GetY((decimal)a) + (double)func.GetY((decimal)b));
@@ -63,7 +62,7 @@ namespace programowanieRow
 
             for (int i = 1; i < n; i++)
             {
-                if (token.IsCancellationRequested)
+                if (cancellationFlags[index])
                 {
                     return double.NaN;
                 }
@@ -85,9 +84,9 @@ namespace programowanieRow
 
         public void CancelAll()
         {
-            foreach (var cts in cancellationTokens)
+            for (int i = 0; i < cancellationFlags.Count; i++)
             {
-                cts.Cancel();
+                cancellationFlags[i] = true;
             }
         }
     }

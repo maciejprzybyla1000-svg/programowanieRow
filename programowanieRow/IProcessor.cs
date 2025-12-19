@@ -10,7 +10,7 @@ namespace programowanieRow
             double b,
             int n,
             Action<int> progressCallback,
-            Action<double, bool> completedCallback
+            Action<double, bool, long> completedCallback 
         );
 
         void CancelAll();
